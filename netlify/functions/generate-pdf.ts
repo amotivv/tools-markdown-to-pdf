@@ -143,11 +143,37 @@ export const handler: Handler = async (event: HandlerEvent) => {
               max-width: 100%;
               box-sizing: border-box;
             }
-            h1, h2, h3, h4, h5, h6 {
+
+            /* Improved page break controls */
+            h1, h2, h3 {
               color: #111111;
               font-weight: 500;
-              margin-top: 2em;
-              margin-bottom: 1em;
+              margin-top: 3rem;
+              margin-bottom: 1.5rem;
+              page-break-after: avoid;
+              page-break-inside: avoid;
+              border-bottom: 1px solid #E5E5E5;
+              padding-bottom: 0.5rem;
+            }
+
+            h4, h5, h6 {
+              color: #111111;
+              font-weight: 500;
+              margin-top: 2rem;
+              margin-bottom: 1rem;
+              page-break-after: avoid;
+            }
+
+            /* Content spacing and breaks */
+            p, ul, ol {
+              orphans: 3;
+              widows: 3;
+              margin-bottom: 1.5rem;
+            }
+
+            section, article {
+              page-break-inside: avoid;
+              margin-bottom: 2rem;
             }
             h1 { font-size: 2.5em; }
             h2 { font-size: 2em; }
@@ -169,11 +195,23 @@ export const handler: Handler = async (event: HandlerEvent) => {
               border-radius: 3px;
               font-size: 0.9em;
             }
+            /* Table improvements */
             table {
               width: 100%;
               border-collapse: collapse;
-              margin: 1em 0;
+              margin: 2rem 0;
               page-break-inside: avoid;
+              break-inside: avoid;
+            }
+
+            /* Ensure table headers repeat on new pages */
+            thead {
+              display: table-header-group;
+            }
+            
+            /* Keep table footers with their tables */
+            tfoot {
+              display: table-footer-group;
             }
             th {
               background: #F8F8F8;
@@ -198,17 +236,24 @@ export const handler: Handler = async (event: HandlerEvent) => {
               color: #4D7EFF;
               text-decoration: none;
             }
+            /* Improved blockquotes */
             blockquote {
               border-left: 4px solid rgba(77, 126, 255, 0.2);
-              margin: 0;
-              padding-left: 1em;
+              margin: 2rem 0;
+              padding: 1rem 0 1rem 1.5rem;
               color: #333333;
+              page-break-inside: avoid;
+              background: rgba(77, 126, 255, 0.05);
+              border-radius: 0 4px 4px 0;
             }
+            /* Table of Contents improvements */
             #toc {
               background: #F8F8F8;
-              padding: 1em 2em;
+              padding: 1.5rem 2rem;
               border-radius: 4px;
-              margin-bottom: 2em;
+              margin: 0 0 3rem 0;
+              page-break-after: always;
+              border: 1px solid #E5E5E5;
             }
             #toc h2 {
               margin-top: 0;
@@ -281,12 +326,30 @@ export const handler: Handler = async (event: HandlerEvent) => {
       printBackground: true,
       displayHeaderFooter: options.pageNumbers,
       headerTemplate: options.pageNumbers ? `
-        <div style="font-size: 10px; text-align: right; width: 100%; padding: 0 0.5in; font-family: 'IBM Plex Mono';">
+        <div style="
+          font-size: 10px;
+          text-align: right;
+          width: 100%;
+          padding: 0.25in 0.5in;
+          font-family: 'IBM Plex Mono';
+          border-bottom: 1px solid #E5E5E5;
+          margin-bottom: 0.25in;
+          background-color: #F8F8F8;
+        ">
           <span class="pageNumber"></span>
         </div>
       ` : '',
       footerTemplate: options.pageNumbers ? `
-        <div style="font-size: 10px; text-align: center; width: 100%; padding: 0 0.5in; font-family: 'IBM Plex Mono';">
+        <div style="
+          font-size: 10px;
+          text-align: center;
+          width: 100%;
+          padding: 0.25in 0.5in;
+          font-family: 'IBM Plex Mono';
+          border-top: 1px solid #E5E5E5;
+          margin-top: 0.25in;
+          background-color: #F8F8F8;
+        ">
           <span class="pageNumber"></span> / <span class="totalPages"></span>
         </div>
       ` : '',
