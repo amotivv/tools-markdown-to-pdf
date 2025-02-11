@@ -145,12 +145,6 @@ export const handler: Handler = async (event: HandlerEvent) => {
               box-sizing: border-box;
             }
 
-            /* Content container with proper margins */
-            .content-wrapper {
-              padding: ${options.margins === 'narrow' ? '1cm' : options.margins === 'wide' ? '2cm' : '1.5cm'};
-              padding-left: ${options.margins === 'narrow' ? '1.5cm' : options.margins === 'wide' ? '3cm' : '2cm'};
-              padding-right: ${options.margins === 'narrow' ? '1.5cm' : options.margins === 'wide' ? '3cm' : '2cm'};
-            }
 
             /* Improved page break controls */
             h1, h2, h3 {
@@ -279,15 +273,95 @@ export const handler: Handler = async (event: HandlerEvent) => {
               line-height: 1.8;
             }
             @page {
-              margin: 0;
               size: ${options.paperSize};
+              margin: ${options.margins === 'narrow' ? '1cm' : options.margins === 'wide' ? '2cm' : '1.5cm'};
+            }
+
+            /* Fixed header/footer */
+            .pdf-header {
+              position: fixed;
+              top: 0;
+              left: 0;
+              right: 0;
+              height: 1cm;
+              background-color: #F8F8F8;
+              border-bottom: 2px solid #333333;
+              display: flex;
+              align-items: center;
+              justify-content: flex-end;
+              padding-right: 2cm;
+              font-size: 10px;
+              -webkit-print-color-adjust: exact;
+            }
+
+            .pdf-footer {
+              position: fixed;
+              bottom: 0;
+              left: 0;
+              right: 0;
+              height: 1cm;
+              background-color: #F8F8F8;
+              border-top: 2px solid #333333;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 10px;
+              -webkit-print-color-adjust: exact;
+            }
+
+            /* Content container with proper margins */
+            .content-wrapper {
+              padding: ${options.margins === 'narrow' ? '1cm' : options.margins === 'wide' ? '2cm' : '1.5cm'};
+              padding-left: ${options.margins === 'narrow' ? '1.5cm' : options.margins === 'wide' ? '3cm' : '2cm'};
+              padding-right: ${options.margins === 'narrow' ? '1.5cm' : options.margins === 'wide' ? '3cm' : '2cm'};
+              padding-top: 2cm;    /* Space for header */
+              padding-bottom: 2cm;  /* Space for footer */
+            }
+
+            /* Hide header/footer on first page if ToC exists */
+            .has-toc .page:first-child .pdf-header,
+            .has-toc .page:first-child .pdf-footer {
+              display: none;
+            }
+
+            /* Print styles */
+            @media print {
+              body {
+                margin: 0;
+                padding: 0;
+              }
+              .pdf-header, .pdf-footer {
+                position: fixed;
+                z-index: 9999;
+              }
             }
           </style>
+          <script>
+            function updatePageNumbers() {
+              const pages = document.querySelectorAll('.page');
+              const totalPages = pages.length;
+              pages.forEach((page, index) => {
+                const header = page.querySelector('.pdf-header .page-number');
+                const footer = page.querySelector('.pdf-footer .page-numbers');
+                if (header) header.textContent = (index + 1).toString();
+                if (footer) footer.textContent = \`\${index + 1} / \${totalPages}\`;
+              });
+            }
+            window.addEventListener('load', updatePageNumbers);
+          </script>
         </head>
-        <body>
-          <div class="content-wrapper">
-            ${tocHtml}
-            ${html}
+        <body class="${options.includeToC ? 'has-toc' : ''}">
+          <div class="page">
+            <div class="pdf-header">
+              <span class="page-number">1</span>
+            </div>
+            <div class="content-wrapper">
+              ${tocHtml}
+              ${html}
+            </div>
+            <div class="pdf-footer">
+              <span class="page-numbers">1 / 1</span>
+            </div>
           </div>
         </body>
       </html>
@@ -334,52 +408,7 @@ export const handler: Handler = async (event: HandlerEvent) => {
     const pdf = await page.pdf({
       format: options.paperSize,
       printBackground: true,
-      displayHeaderFooter: options.pageNumbers,
-      headerTemplate: options.pageNumbers ? `
-        <style>
-          #header, #footer { padding: 0 !important; }
-          div { padding: 0; width: 21cm; }
-        </style>
-        <div style="
-          height: 1cm;
-          width: 27.93cm;
-          transform: scale(0.75);
-          transform-origin: top left;
-          background-color: #F8F8F8;
-          border-bottom: 2px solid #333333;
-          display: flex;
-          align-items: center;
-          justify-content: flex-end;
-          padding-right: 2cm;
-          font-family: 'IBM Plex Mono';
-          font-size: 12px;
-          -webkit-print-color-adjust: exact;
-        ">
-          <span class="pageNumber"></span>
-        </div>
-      ` : '',
-      footerTemplate: options.pageNumbers ? `
-        <style>
-          #header, #footer { padding: 0 !important; }
-          div { padding: 0; width: 21cm; }
-        </style>
-        <div style="
-          height: 1cm;
-          width: 27.93cm;
-          transform: scale(0.75);
-          transform-origin: bottom left;
-          background-color: #F8F8F8;
-          border-top: 2px solid #333333;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-family: 'IBM Plex Mono';
-          font-size: 12px;
-          -webkit-print-color-adjust: exact;
-        ">
-          <span class="pageNumber"></span> / <span class="totalPages"></span>
-        </div>
-      ` : '',
+      displayHeaderFooter: false,
       margin: {
         top: options.margins === 'narrow' ? '1cm' : options.margins === 'wide' ? '2cm' : '1.5cm',
         bottom: options.margins === 'narrow' ? '1cm' : options.margins === 'wide' ? '2cm' : '1.5cm',
