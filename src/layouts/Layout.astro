@@ -1,4 +1,6 @@
 ---
+import '../styles/global.css';
+
 interface Props {
   title?: string;
   description?: string;
@@ -39,62 +41,3 @@ const {
     <slot />
   </body>
 </html>
-
-<style is:global>
-  :root {
-    --primary: #4D7EFF;
-    --secondary: #111111;
-    --off-white: #F8F8F8;
-    --light-gray: #E5E5E5;
-    --dark-gray: #333333;
-  }
-  
-  html {
-    font-family: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, Monaco, monospace;
-    background: var(--off-white);
-  }
-
-  body {
-    color: var(--secondary);
-  }
-
-  .btn-primary {
-    @apply bg-primary text-white px-8 py-4 rounded-xl hover:bg-primary/90 transition-all duration-300;
-  }
-
-  .btn-secondary {
-    @apply border border-dark-gray text-dark-gray px-8 py-4 rounded-xl hover:bg-dark-gray hover:text-white transition-all duration-300;
-  }
-
-  .input-field {
-    @apply w-full px-4 py-3 rounded-xl bg-white border-0 text-dark-gray focus:ring-2 focus:ring-primary;
-  }
-
-  .card {
-    @apply bg-white rounded-2xl p-8 shadow-sm hover:shadow-lg transition-all duration-300;
-  }
-
-  .floating-toolbar {
-    @apply fixed bottom-8 left-1/2 -translate-x-1/2 bg-white rounded-2xl shadow-lg p-4 flex items-center gap-4 z-50;
-  }
-
-  .toolbar-button {
-    @apply p-2 rounded-lg hover:bg-off-white transition-colors text-dark-gray hover:text-primary;
-  }
-
-  .settings-panel {
-    @apply fixed right-8 top-24 w-80 bg-white rounded-2xl shadow-lg p-6 z-40 transform transition-transform duration-300;
-  }
-
-  .settings-panel.hidden {
-    @apply translate-x-full;
-  }
-
-  .editor-container {
-    @apply flex-grow flex flex-col;
-  }
-
-  .preview-container {
-    @apply flex-grow overflow-auto bg-white rounded-2xl shadow-sm p-8;
-  }
-</style>

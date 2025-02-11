@@ -215,13 +215,13 @@ document.addEventListener('DOMContentLoaded', () => {
       type="text"
       id="filename"
       placeholder="Enter filename"
-      class="input-field !w-64 !py-2 !px-3 text-sm"
+      class="input-field form-input !w-64 !py-2 !px-3 text-sm"
       value={storedData.currentFile?.name || 'document.pdf'}
     />
     
     <select
       id="recentFiles"
-      class="input-field !w-auto !py-2 !px-3 text-sm"
+      class="input-field form-select !w-auto !py-2 !px-3 text-sm"
       onchange="loadRecentFile(this.value)"
     >
       <option value="">Recent Files</option>
@@ -311,7 +311,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <label class="block text-sm mb-2 text-dark-gray">Paper Size</label>
             <select
               id="paperSize"
-              class="input-field !py-2"
+              class="input-field form-select !py-2"
               value={lastUsedSettings.paperSize}
             >
               <option value="a4">A4</option>
@@ -342,7 +342,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <input
               type="checkbox"
               id="toc"
-              class="rounded text-primary focus:ring-primary focus:ring-offset-2 focus:ring-offset-white"
+              class="form-checkbox rounded text-primary focus:ring-primary focus:ring-offset-2 focus:ring-offset-white"
               checked={lastUsedSettings.includeToC}
             >
             <span class="text-dark-gray text-sm">Table of Contents</span>
@@ -377,7 +377,7 @@ document.addEventListener('DOMContentLoaded', () => {
             type="text"
             id="metaTitle"
             placeholder="Title"
-            class="input-field !py-2"
+            class="input-field form-input !py-2"
             value={lastUsedSettings.metadata?.title || ''}
           />
           <input
