@@ -1,8 +1,7 @@
 import type { Handler, HandlerEvent, HandlerResponse } from '@netlify/functions';
-import { convert } from 'mdpdf';
-import { writeFile, readFile, unlink } from 'fs/promises';
-import { join } from 'path';
-import { tmpdir } from 'os';
+const { convert } = require('mdpdf');
+const { writeFile, readFile, unlink, mkdir } = require('fs/promises');
+const { join } = require('path');
 
 interface PDFOptions {
   paperSize: 'a4' | 'letter' | 'legal';
@@ -18,10 +17,11 @@ interface PDFOptions {
 }
 
 export const handler: Handler = async (event: HandlerEvent) => {
-  // Create temporary files for input and output
-  const tempDir = tmpdir();
-  const inputPath = join(tempDir, 'input.md');
-  const outputPath = join(tempDir, 'output.pdf');
+  // Create temporary files with absolute paths
+  const tempDir = '/tmp';
+  const timestamp = Date.now();
+  const inputPath = join(tempDir, `input-${timestamp}.md`);
+  const outputPath = join(tempDir, `output-${timestamp}.pdf`);
 
   try {
     // Parse and validate request body
@@ -54,16 +54,25 @@ export const handler: Handler = async (event: HandlerEvent) => {
     const margin = options.margins === 'narrow' ? '15mm' : options.margins === 'wide' ? '25mm' : '20mm';
 
     // Fix image paths to be absolute URLs
+    const siteUrl = process.env.URL || '';
     const fixedMarkdown = markdown.replace(
       /!\[([^\]]*)\]\(([^)]+)\)/g,
       (match, alt, path) => {
         if (path.startsWith('http')) {
           return match;
         }
-        // Convert relative paths to absolute URLs
-        return `![${alt}](${process.env.URL}/${path.replace(/^\//, '')})`;
+        // Remove leading slash and join with site URL
+        const cleanPath = path.replace(/^\//, '');
+        return `![${alt}](${siteUrl}/${cleanPath})`;
       }
     );
+
+    // Ensure temp directory exists
+    try {
+      await mkdir(tempDir, { recursive: true });
+    } catch (err) {
+      // Ignore error if directory already exists
+    }
 
     // Write markdown to temporary file
     await writeFile(inputPath, fixedMarkdown);
@@ -128,6 +137,13 @@ export const handler: Handler = async (event: HandlerEvent) => {
       }
     };
 
+    console.log('PDF Generation Options:', {
+      inputPath,
+      outputPath,
+      tempDir,
+      siteUrl
+    });
+
     // Generate PDF
     await convert(mdpdfOptions);
 
@@ -155,12 +171,10 @@ export const handler: Handler = async (event: HandlerEvent) => {
     console.error('PDF Generation Error:', error);
 
     // Clean up temporary files in case of error
-    if (inputPath) {
-      await unlink(inputPath).catch(() => {});
-    }
-    if (outputPath) {
-      await unlink(outputPath).catch(() => {});
-    }
+    await Promise.all([
+      unlink(inputPath).catch(() => {}),
+      unlink(outputPath).catch(() => {})
+    ]);
 
     const response: HandlerResponse = {
       statusCode: 500,
