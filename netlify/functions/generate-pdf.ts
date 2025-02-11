@@ -139,11 +139,17 @@ export const handler: Handler = async (event: HandlerEvent) => {
               font-family: 'IBM Plex Mono', monospace;
               line-height: 1.6;
               color: #111111;
-              padding: ${options.margins === 'narrow' ? '0.75in' : options.margins === 'wide' ? '1.75in' : '1.25in'};
-              padding-top: ${options.margins === 'narrow' ? '1.25in' : options.margins === 'wide' ? '2.25in' : '1.75in'};
-              padding-bottom: ${options.margins === 'narrow' ? '1.25in' : options.margins === 'wide' ? '2.25in' : '1.75in'};
+              padding: 0 !important;
+              margin: 0 !important;
               max-width: 100%;
               box-sizing: border-box;
+            }
+
+            /* Content container with proper margins */
+            .content-wrapper {
+              padding: ${options.margins === 'narrow' ? '1cm' : options.margins === 'wide' ? '2cm' : '1.5cm'};
+              padding-left: ${options.margins === 'narrow' ? '1.5cm' : options.margins === 'wide' ? '3cm' : '2cm'};
+              padding-right: ${options.margins === 'narrow' ? '1.5cm' : options.margins === 'wide' ? '3cm' : '2cm'};
             }
 
             /* Improved page break controls */
@@ -279,8 +285,10 @@ export const handler: Handler = async (event: HandlerEvent) => {
           </style>
         </head>
         <body>
-          ${tocHtml}
-          ${html}
+          <div class="content-wrapper">
+            ${tocHtml}
+            ${html}
+          </div>
         </body>
       </html>
     `;
@@ -328,48 +336,55 @@ export const handler: Handler = async (event: HandlerEvent) => {
       printBackground: true,
       displayHeaderFooter: options.pageNumbers,
       headerTemplate: options.pageNumbers ? `
+        <style>
+          #header, #footer { padding: 0 !important; }
+          div { padding: 0; width: 21cm; }
+        </style>
         <div style="
-          -webkit-print-color-adjust: exact;
-          position: relative;
-          width: 100%;
-          height: 0.9in;
+          height: 1cm;
+          width: 27.93cm;
+          transform: scale(0.75);
+          transform-origin: top left;
           background-color: #F8F8F8;
           border-bottom: 2px solid #333333;
           display: flex;
           align-items: center;
           justify-content: flex-end;
-          padding-right: 0.5in;
+          padding-right: 2cm;
           font-family: 'IBM Plex Mono';
-          font-size: 10px;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+          font-size: 12px;
+          -webkit-print-color-adjust: exact;
         ">
           <span class="pageNumber"></span>
         </div>
       ` : '',
       footerTemplate: options.pageNumbers ? `
+        <style>
+          #header, #footer { padding: 0 !important; }
+          div { padding: 0; width: 21cm; }
+        </style>
         <div style="
-          -webkit-print-color-adjust: exact;
-          position: relative;
-          width: 100%;
-          height: 0.9in;
+          height: 1cm;
+          width: 27.93cm;
+          transform: scale(0.75);
+          transform-origin: bottom left;
           background-color: #F8F8F8;
           border-top: 2px solid #333333;
           display: flex;
           align-items: center;
           justify-content: center;
           font-family: 'IBM Plex Mono';
-          font-size: 10px;
-          box-shadow: 0 -2px 4px rgba(0,0,0,0.1);
+          font-size: 12px;
+          -webkit-print-color-adjust: exact;
         ">
           <span class="pageNumber"></span> / <span class="totalPages"></span>
         </div>
       ` : '',
       margin: {
-        // Add extra space for header/footer
-        top: options.margins === 'narrow' ? '1.25in' : options.margins === 'wide' ? '2.25in' : '1.75in',
-        bottom: options.margins === 'narrow' ? '1.25in' : options.margins === 'wide' ? '2.25in' : '1.75in',
-        left: options.margins === 'narrow' ? '0.5in' : options.margins === 'wide' ? '1.5in' : '1in',
-        right: options.margins === 'narrow' ? '0.5in' : options.margins === 'wide' ? '1.5in' : '1in'
+        top: options.margins === 'narrow' ? '1cm' : options.margins === 'wide' ? '2cm' : '1.5cm',
+        bottom: options.margins === 'narrow' ? '1cm' : options.margins === 'wide' ? '2cm' : '1.5cm',
+        left: options.margins === 'narrow' ? '1.5cm' : options.margins === 'wide' ? '3cm' : '2cm',
+        right: options.margins === 'narrow' ? '1.5cm' : options.margins === 'wide' ? '3cm' : '2cm'
       }
     });
 
