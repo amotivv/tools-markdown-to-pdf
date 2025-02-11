@@ -1,5 +1,43 @@
 import type { APIRoute } from 'astro';
-import puppeteer from 'puppeteer';
+// Import both puppeteer versions but handle them conditionally
+import chromium from '@sparticuz/chromium';
+import puppeteerCore from 'puppeteer-core';
+import type { Browser as CoreBrowser, Page as CorePage } from 'puppeteer-core';
+import type { Browser as PuppeteerBrowser, Page as PuppeteerPage } from 'puppeteer';
+
+interface Metadata {
+  title?: string;
+  author?: string;
+  subject?: string;
+  keywords?: string[];
+}
+
+// Helper function to create browser instance
+async function createBrowser(): Promise<CoreBrowser | PuppeteerBrowser> {
+  try {
+    // Check if we're in a Netlify environment
+    if (!process.env.NETLIFY) {
+      // Use regular puppeteer for development
+      const puppeteer = await import('puppeteer');
+      return puppeteer.launch({
+        headless: true,
+        args: ['--no-sandbox']
+      });
+    } else {
+      // Production: use chromium for serverless
+      const executablePath = await chromium.executablePath();
+      return puppeteerCore.launch({
+        executablePath,
+        headless: true,
+        args: chromium.args,
+        defaultViewport: chromium.defaultViewport
+      });
+    }
+  } catch (error) {
+    console.error('Browser launch error:', error);
+    throw error;
+  }
+}
 import MarkdownIt from 'markdown-it';
 
 const md = new MarkdownIt({
@@ -162,16 +200,8 @@ export const POST: APIRoute = async ({ request }) => {
       </html>
     `;
 
-    console.log('Launching browser...');
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu'
-      ]
-    });
+    console.log('Launching browser in', process.env.NODE_ENV, 'mode...');
+    const browser = await createBrowser();
     
     const page = await browser.newPage();
     
@@ -182,7 +212,7 @@ export const POST: APIRoute = async ({ request }) => {
     
     // Generate table of contents if requested
     if (options.includeToC) {
-      await page.evaluate(() => {
+      await (page as CorePage).evaluate(() => {
         const toc = document.getElementById('toc');
         if (!toc) return;
 
@@ -209,12 +239,13 @@ export const POST: APIRoute = async ({ request }) => {
 
     // Set PDF metadata if provided
     if (options.metadata) {
-      await page.evaluate((metadata) => {
+      const metadata = options.metadata as Metadata;
+      await (page as CorePage).evaluate((meta: Metadata) => {
         const metaTags = [
-          { name: 'title', content: metadata.title },
-          { name: 'author', content: metadata.author },
-          { name: 'subject', content: metadata.subject },
-          { name: 'keywords', content: metadata.keywords.join(', ') }
+          { name: 'title', content: meta.title },
+          { name: 'author', content: meta.author },
+          { name: 'subject', content: meta.subject },
+          { name: 'keywords', content: meta.keywords?.join(', ') || '' }
         ];
         
         metaTags.forEach(({ name, content }) => {
