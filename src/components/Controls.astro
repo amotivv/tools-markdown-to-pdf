@@ -91,13 +91,24 @@ function setupAutosave() {
   }
 }
 
+const MAX_CHARS = 100000;
+
 async function generatePDF() {
   if (!window.markdownEditor) {
     console.error('Editor not initialized');
     return;
   }
 
+  const exportButton = document.getElementById('exportPDF') as HTMLButtonElement;
+  if (exportButton.disabled) return;
+
   let markdown = window.markdownEditor.state.doc.toString();
+  
+  // Check character limit
+  if (markdown.length > MAX_CHARS) {
+    alert(`Document exceeds maximum length of ${MAX_CHARS.toLocaleString()} characters. Please reduce the content.`);
+    return;
+  }
   const paperSize = (document.getElementById('paperSize') as HTMLSelectElement).value;
   const margins = (document.getElementById('margins') as HTMLSelectElement).value;
   const includeToC = (document.getElementById('toc') as HTMLInputElement).checked;
@@ -149,6 +160,17 @@ async function generatePDF() {
     }
   };
 
+  // Update button state
+  exportButton.disabled = true;
+  const originalContent = exportButton.innerHTML;
+  exportButton.innerHTML = `
+    <svg class="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+    </svg>
+    Generating PDF...
+  `;
+
   console.log('Generating PDF with payload:', payload);
 
   try {
@@ -176,6 +198,25 @@ async function generatePDF() {
   } catch (error) {
     console.error('Failed to generate PDF:', error);
     alert('Failed to generate PDF. Please try again.');
+  } finally {
+    // Reset button state
+    exportButton.disabled = false;
+    exportButton.innerHTML = originalContent;
+  }
+}
+
+// Character count display
+function updateCharCount() {
+  if (!window.markdownEditor) return;
+  
+  const content = window.markdownEditor.state.doc.toString();
+  const charCount = content.length;
+  const charCountEl = document.getElementById('charCount');
+  
+  if (charCountEl) {
+    const percentage = (charCount / MAX_CHARS) * 100;
+    charCountEl.textContent = `${charCount.toLocaleString()} / ${MAX_CHARS.toLocaleString()}`;
+    charCountEl.className = percentage > 80 ? 'text-red-500' : 'text-dark-gray';
   }
 }
 
@@ -198,6 +239,18 @@ function handleBackdropClick(event: MouseEvent) {
 
 // Add event listeners
 document.addEventListener('DOMContentLoaded', () => {
+  // Set up character count
+  const charCountContainer = document.createElement('div');
+  charCountContainer.className = 'text-sm text-dark-gray absolute top-2 right-2';
+  charCountContainer.id = 'charCount';
+  document.querySelector('.editor-container')?.appendChild(charCountContainer);
+
+  // Update char count on editor changes
+  if (window.markdownEditor) {
+    window.markdownEditor.dom.addEventListener('keyup', updateCharCount);
+    updateCharCount(); // Initial count
+  }
+
   document.getElementById('fileInput')?.addEventListener('change', handleFileUpload);
   document.getElementById('saveMarkdown')?.addEventListener('click', saveMarkdown);
   document.getElementById('exportPDF')?.addEventListener('click', generatePDF);
