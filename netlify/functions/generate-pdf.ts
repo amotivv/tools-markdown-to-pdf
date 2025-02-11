@@ -260,10 +260,20 @@ export const handler: Handler = async (event: HandlerEvent) => {
     });
     
     const page = await browser.newPage() as any;
-    await page.setContent(template);
+    await page.setContent(template, {
+      waitUntil: ['load', 'networkidle0']
+    });
 
-    // Wait for fonts to load
-    await page.waitForTimeout(1000);
+    // Ensure content is ready
+    await page.evaluate(() => {
+      return new Promise((resolve) => {
+        if (document.readyState === 'complete') {
+          resolve(true);
+        } else {
+          window.addEventListener('load', () => resolve(true));
+        }
+      });
+    });
 
     // Generate PDF
     const pdf = await page.pdf({
