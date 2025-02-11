@@ -2,6 +2,7 @@ import type { Handler, HandlerEvent, HandlerResponse } from '@netlify/functions'
 import chromium from '@sparticuz/chromium';
 import puppeteerCore from 'puppeteer-core';
 import MarkdownIt from 'markdown-it';
+
 interface Metadata {
   title?: string;
   author?: string;
@@ -115,8 +116,25 @@ export const handler: Handler = async (event: HandlerEvent) => {
         <head>
           <meta charset="UTF-8">
           ${metadataTags}
-          <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
           <style>
+            @font-face {
+              font-family: 'IBM Plex Mono';
+              src: url('https://fonts.gstatic.com/s/ibmplexmono/v19/zYX9KVElMYYaJe8bpLHnCwDKjXr8AIFsdP3pBms.woff2') format('woff2');
+              font-weight: 400;
+              font-style: normal;
+            }
+            @font-face {
+              font-family: 'IBM Plex Mono';
+              src: url('https://fonts.gstatic.com/s/ibmplexmono/v19/zYX9KVElMYYaJe8bpLHnCwDKjWr7AIFsdP3pBms.woff2') format('woff2');
+              font-weight: 500;
+              font-style: normal;
+            }
+            @font-face {
+              font-family: 'IBM Plex Mono';
+              src: url('https://fonts.gstatic.com/s/ibmplexmono/v19/zYX9KVElMYYaJe8bpLHnCwDKjQ76AIFsdP3pBms.woff2') format('woff2');
+              font-weight: 600;
+              font-style: normal;
+            }
             body {
               font-family: 'IBM Plex Mono', monospace;
               line-height: 1.6;
@@ -220,17 +238,32 @@ export const handler: Handler = async (event: HandlerEvent) => {
       </html>
     `;
 
+    // Configure Chromium for serverless
+    chromium.setGraphicsMode = false;
+    
     // Initialize browser with serverless Chrome
     const executablePath = await chromium.executablePath();
     const browser = await puppeteerCore.launch({
       executablePath,
-      args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
+      args: [
+        ...chromium.args,
+        '--disable-web-security',
+        '--font-render-hinting=none',
+        '--disable-gpu'
+      ],
+      defaultViewport: {
+        width: 1200,
+        height: 800,
+        deviceScaleFactor: 1
+      },
       headless: true
     });
     
     const page = await browser.newPage() as any;
     await page.setContent(template);
+
+    // Wait for fonts to load
+    await page.waitForTimeout(1000);
 
     // Generate PDF
     const pdf = await page.pdf({
@@ -259,11 +292,12 @@ export const handler: Handler = async (event: HandlerEvent) => {
 
     const response: HandlerResponse = {
       statusCode: 200,
-      body: pdf.toString('base64'),
+      body: Buffer.from(pdf).toString('base64'),
       isBase64Encoded: true,
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': 'attachment; filename="document.pdf"'
+        'Content-Disposition': 'attachment; filename="document.pdf"',
+        'Cache-Control': 'no-cache'
       }
     };
     return response;
