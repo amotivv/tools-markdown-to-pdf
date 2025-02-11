@@ -3,6 +3,9 @@
   "include": [".astro/types.d.ts", "src/types/**/*.d.ts", "**/*"],
   "exclude": ["dist"],
   "compilerOptions": {
-    "typeRoots": ["./node_modules/@types", "./src/types"]
+    "typeRoots": ["./node_modules/@types", "./src/types"],
+    "paths": {
+      "markdown-it": ["./src/types/markdown-it.d.ts"]
+    }
   }
 }

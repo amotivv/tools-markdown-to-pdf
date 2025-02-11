@@ -1,205 +1,64 @@
 ---
 ---
+
+<div class="flex flex-col h-full">
+  <div id="editor" class="flex-1 min-h-0"></div>
+</div>
+
 <script>
-import { EditorView, basicSetup } from "codemirror";
-import { markdown } from "@codemirror/lang-markdown";
-import { lineNumbers } from "@codemirror/view";
-import MarkdownIt from "markdown-it";
+  import { EditorView, basicSetup } from 'codemirror';
+  import { markdown } from '@codemirror/lang-markdown';
+  import { EditorState } from '@codemirror/state';
+  import MarkdownIt from 'markdown-it';
+  import hljs from 'highlight.js';
+  import 'highlight.js/styles/github.css';
 
-const md = new MarkdownIt({
-  html: true,
-  linkify: true,
-  typographer: true
-});
+  const md = new MarkdownIt({
+    html: true,
+    linkify: true,
+    typographer: true,
+    highlight: function (str: string, lang: string): string {
+      if (lang && hljs.getLanguage(lang)) {
+        try {
+          const result = hljs.highlight(str, { language: lang });
+          return result.value;
+        } catch (__) {}
+      }
+      return ''; // use external default escaping
+    }
+  });
 
-let editor;
+  // Load saved content from localStorage
+  const savedContent = localStorage.getItem('markdown') || '';
 
-// Initialize editor when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
-  // Create editor
-  editor = new EditorView({
-    doc: "",
+  // Create editor state
+  const state = EditorState.create({
+    doc: savedContent,
     extensions: [
       basicSetup,
       markdown(),
-    EditorView.updateListener.of(update => {
-      if (update.docChanged) {
-        const content = update.state.doc.toString();
-        
-        // Update preview
-        const preview = document.getElementById('preview');
-        if (preview) {
-          preview.innerHTML = md.render(content);
+      EditorView.updateListener.of((update) => {
+        if (update.docChanged) {
+          // Save content to localStorage
+          const content = update.state.doc.toString();
+          localStorage.setItem('markdown', content);
         }
-
-        // Update character count
-        const charCount = document.getElementById('charCount');
-        if (charCount) {
-          const count = content.length;
-          const maxChars = 100000;
-          const percentage = (count / maxChars) * 100;
-          charCount.textContent = `${count.toLocaleString()} / ${maxChars.toLocaleString()}`;
-          charCount.className = percentage > 80 ? 'text-red-500' : 'text-dark-gray';
-          charCount.style.backgroundColor = percentage > 80 ? 'rgba(255, 240, 240, 0.9)' : 'rgba(255, 255, 255, 0.9)';
-        }
-      }
-    }),
-    lineNumbers(),
-    EditorView.theme({
-      "&": {
-        height: "100%",
-        fontSize: "14px",
-        fontFamily: "IBM Plex Mono, monospace",
-        backgroundColor: "transparent"
-      },
-      ".cm-content": {
-        fontFamily: "IBM Plex Mono, monospace",
-        padding: "2rem",
-        minHeight: "calc(100vh - 12rem)"
-      },
-      ".cm-line": {
-        padding: "0 0.5rem",
-        lineHeight: "1.8",
-        fontFamily: "IBM Plex Mono, monospace"
-      },
-      ".cm-matchingBracket": {
-        color: "#4D7EFF",
-        textDecoration: "underline"
-      },
-      ".cm-activeLine": {
-        backgroundColor: "rgba(77, 126, 255, 0.05)"
-      },
-      ".cm-gutters": {
-        backgroundColor: "#F8F8F8",
-        border: "none",
-        borderRight: "1px solid #E5E5E5",
-        paddingRight: "0.5rem"
-      },
-      ".cm-gutter": {
-        minWidth: "2.5rem",
-        color: "#666666",
-        fontSize: "12px",
-        textAlign: "right"
-      },
-      ".cm-activeLineGutter": {
-        backgroundColor: "#F8F8F8",
-        color: "#4D7EFF"
-      },
-      ".cm-selectionBackground": {
-        backgroundColor: "rgba(77, 126, 255, 0.1) !important"
-      },
-      ".cm-focused": {
-        outline: "none !important"
-      },
-      ".cm-cursor": {
-        borderLeftColor: "#4D7EFF"
-      },
-      ".cm-gutterElement": {
-        paddingLeft: "0.5rem",
-        paddingRight: "0.5rem"
-      }
-    })
-  ],
-  parent: document.getElementById("editor")!
-});
-
-  // Make editor instance available globally
-  window.markdownEditor = editor;
-
-  // Add sample content
-  editor.dispatch({
-  changes: {
-    from: 0,
-    insert: `# Welcome to Markdown Editor
-
-Start typing your markdown here...
-
-## Features
-- Real-time preview
-- Syntax highlighting
-- Export to PDF
-- Custom styling
-
-### Code Example
-\`\`\`javascript
-function hello() {
-  console.log("Hello, World!");
-}
-\`\`\`
-`
-  }
+      })
+    ]
   });
 
-  console.log('Editor initialized with sample content');
-});
+  // Create editor view
+  const view = new EditorView({
+    state,
+    parent: document.getElementById('editor')!
+  });
 </script>
-
-<div class="editor-container relative">
-  <div id="editor" class="h-full overflow-hidden border-0"></div>
-</div>
 
 <style>
-  .editor-container {
-    position: relative;
+  .cm-editor {
     height: 100%;
   }
-
-  #editor {
-    min-height: calc(100vh - 12rem);
-  }
-
-  :global(#charCount) {
-    position: absolute;
-    top: 0.5rem;
-    right: 0.5rem;
-    padding: 0.25rem 0.5rem;
-    border-radius: 0.375rem;
-    background-color: rgba(255, 255, 255, 0.9);
-    backdrop-filter: blur(4px);
-    font-size: 0.875rem;
-    line-height: 1.25rem;
-    z-index: 10;
-  }
-
-  #editor :global(.cm-editor) {
-    height: 100%;
-  }
-
-  #editor :global(.cm-scroller) {
-    overflow: auto;
-    scrollbar-width: thin;
-    scrollbar-color: var(--light-gray) var(--off-white);
-  }
-
-  #editor :global(.cm-scroller::-webkit-scrollbar) {
-    width: 6px;
-    height: 6px;
-  }
-
-  #editor :global(.cm-scroller::-webkit-scrollbar-track) {
-    background: var(--off-white);
-    border-radius: 3px;
-  }
-
-  #editor :global(.cm-scroller::-webkit-scrollbar-thumb) {
-    background: var(--light-gray);
-    border-radius: 3px;
-  }
-
-  #editor :global(.cm-scroller::-webkit-scrollbar-thumb:hover) {
-    background: #d1d1d1;
-  }
-
-  #editor :global(.cm-gutters) {
-    user-select: none;
+  .cm-scroller {
+    font-family: 'IBM Plex Mono', monospace;
   }
 </style>
-
-<script>
-// TypeScript declaration for the global editor instance
-declare global {
-  interface Window {
-    markdownEditor: any;
-  }
-}
-</script>
