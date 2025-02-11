@@ -8,11 +8,14 @@ export default defineConfig({
   adapter: netlify(),
   vite: {
     build: {
-      assetsInlineLimit: 0
+      assetsInlineLimit: 0,
+      rollupOptions: {
+        output: {
+          assetFileNames: 'assets/[name][extname]',
+          chunkFileNames: 'assets/[name].js',
+          entryFileNames: 'assets/[name].js'
+        }
+      }
     }
-  },
-  build: {
-    assets: 'assets',
-    inlineStylesheets: 'never'
   }
 });
