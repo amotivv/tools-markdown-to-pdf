@@ -139,7 +139,9 @@ export const handler: Handler = async (event: HandlerEvent) => {
               font-family: 'IBM Plex Mono', monospace;
               line-height: 1.6;
               color: #111111;
-              padding: ${options.margins === 'narrow' ? '0.5in' : options.margins === 'wide' ? '1.5in' : '1in'};
+              padding: ${options.margins === 'narrow' ? '0.75in' : options.margins === 'wide' ? '1.75in' : '1.25in'};
+              padding-top: ${options.margins === 'narrow' ? '1.25in' : options.margins === 'wide' ? '2.25in' : '1.75in'};
+              padding-bottom: ${options.margins === 'narrow' ? '1.25in' : options.margins === 'wide' ? '2.25in' : '1.75in'};
               max-width: 100%;
               box-sizing: border-box;
             }
@@ -327,35 +329,45 @@ export const handler: Handler = async (event: HandlerEvent) => {
       displayHeaderFooter: options.pageNumbers,
       headerTemplate: options.pageNumbers ? `
         <div style="
-          font-size: 10px;
-          text-align: right;
+          -webkit-print-color-adjust: exact;
+          position: relative;
           width: 100%;
-          padding: 0.25in 0.5in;
-          font-family: 'IBM Plex Mono';
-          border-bottom: 1px solid #E5E5E5;
-          margin-bottom: 0.25in;
+          height: 0.9in;
           background-color: #F8F8F8;
+          border-bottom: 2px solid #333333;
+          display: flex;
+          align-items: center;
+          justify-content: flex-end;
+          padding-right: 0.5in;
+          font-family: 'IBM Plex Mono';
+          font-size: 10px;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         ">
           <span class="pageNumber"></span>
         </div>
       ` : '',
       footerTemplate: options.pageNumbers ? `
         <div style="
-          font-size: 10px;
-          text-align: center;
+          -webkit-print-color-adjust: exact;
+          position: relative;
           width: 100%;
-          padding: 0.25in 0.5in;
-          font-family: 'IBM Plex Mono';
-          border-top: 1px solid #E5E5E5;
-          margin-top: 0.25in;
+          height: 0.9in;
           background-color: #F8F8F8;
+          border-top: 2px solid #333333;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-family: 'IBM Plex Mono';
+          font-size: 10px;
+          box-shadow: 0 -2px 4px rgba(0,0,0,0.1);
         ">
           <span class="pageNumber"></span> / <span class="totalPages"></span>
         </div>
       ` : '',
       margin: {
-        top: options.margins === 'narrow' ? '0.5in' : options.margins === 'wide' ? '1.5in' : '1in',
-        bottom: options.margins === 'narrow' ? '0.5in' : options.margins === 'wide' ? '1.5in' : '1in',
+        // Add extra space for header/footer
+        top: options.margins === 'narrow' ? '1.25in' : options.margins === 'wide' ? '2.25in' : '1.75in',
+        bottom: options.margins === 'narrow' ? '1.25in' : options.margins === 'wide' ? '2.25in' : '1.75in',
         left: options.margins === 'narrow' ? '0.5in' : options.margins === 'wide' ? '1.5in' : '1in',
         right: options.margins === 'narrow' ? '0.5in' : options.margins === 'wide' ? '1.5in' : '1in'
       }
