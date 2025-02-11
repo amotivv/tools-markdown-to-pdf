@@ -1,0 +1,408 @@
+---
+import { getStorageData } from '../utils/storage';
+
+// Get initial settings from storage
+const storedData = getStorageData();
+const { lastUsedSettings } = storedData;
+---
+
+<script>
+import { 
+  updateSettings, 
+  addRecentFile, 
+  updateCurrentFile,
+  getStorageData
+} from '../utils/storage';
+import katex from 'katex';
+import 'katex/dist/katex.min.css';
+
+// File operations
+function handleFileUpload(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target?.result as string;
+      if (window.markdownEditor) {
+        const doc = window.markdownEditor.state.doc;
+        window.markdownEditor.dispatch({
+          changes: { from: 0, to: doc.length, insert: content }
+        });
+        // Save to recent files
+        addRecentFile(file.name, content);
+        // Update filename input
+        const filenameInput = document.getElementById('filename') as HTMLInputElement;
+        filenameInput.value = file.name.replace(/\.md$/, '.pdf');
+      }
+    };
+    reader.readAsText(file);
+  }
+}
+
+function saveMarkdown() {
+  if (window.markdownEditor) {
+    const content = window.markdownEditor.state.doc.toString();
+    const filename = (document.getElementById('filename') as HTMLInputElement).value.replace(/\.pdf$/, '.md');
+    const blob = new Blob([content], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    // Save to recent files
+    addRecentFile(filename, content);
+  }
+}
+
+function loadRecentFile(filename: string) {
+  if (!filename) return;
+  
+  const data = getStorageData();
+  const file = data.recentFiles.find(f => f.name === filename);
+  if (file && window.markdownEditor) {
+    const doc = window.markdownEditor.state.doc;
+    window.markdownEditor.dispatch({
+      changes: { from: 0, to: doc.length, insert: file.content }
+    });
+    // Update filename input
+    const filenameInput = document.getElementById('filename') as HTMLInputElement;
+    filenameInput.value = filename.replace(/\.md$/, '.pdf');
+  }
+}
+
+// Autosave functionality
+let autosaveTimeout: ReturnType<typeof setTimeout>;
+function setupAutosave() {
+  if (window.markdownEditor) {
+    window.markdownEditor.dom.addEventListener('keyup', () => {
+      if (autosaveTimeout) clearTimeout(autosaveTimeout);
+      autosaveTimeout = setTimeout(() => {
+        const content = window.markdownEditor.state.doc.toString();
+        const filename = (document.getElementById('filename') as HTMLInputElement).value;
+        updateCurrentFile(filename, content);
+      }, 1000);
+    });
+  }
+}
+
+async function generatePDF() {
+  if (!window.markdownEditor) {
+    console.error('Editor not initialized');
+    return;
+  }
+
+  let markdown = window.markdownEditor.state.doc.toString();
+  const paperSize = (document.getElementById('paperSize') as HTMLSelectElement).value;
+  const margins = (document.getElementById('margins') as HTMLSelectElement).value;
+  const includeToC = (document.getElementById('toc') as HTMLInputElement).checked;
+  const pageNumbers = (document.getElementById('pageNumbers') as HTMLInputElement).checked;
+  const mathEnabled = (document.getElementById('mathEnabled') as HTMLInputElement).checked;
+  const filename = (document.getElementById('filename') as HTMLInputElement).value;
+
+  // Get metadata
+  const metadata = {
+    title: (document.getElementById('metaTitle') as HTMLInputElement).value,
+    author: (document.getElementById('metaAuthor') as HTMLInputElement).value,
+    subject: (document.getElementById('metaSubject') as HTMLInputElement).value,
+    keywords: (document.getElementById('metaKeywords') as HTMLInputElement).value
+      .split(',')
+      .map(k => k.trim())
+      .filter(k => k)
+  };
+
+  // Save settings
+  updateSettings({
+    paperSize,
+    margins,
+    includeToC,
+    pageNumbers,
+    mathEnabled,
+    metadata
+  });
+
+  // Process math if enabled
+  if (mathEnabled) {
+    markdown = markdown.replace(/\$\$(.*?)\$\$/g, (_: string, math: string) => {
+      try {
+        return katex.renderToString(math, { displayMode: true });
+      } catch (error) {
+        console.error('Failed to render math:', error);
+        return math;
+      }
+    });
+  }
+
+  const payload = {
+    markdown,
+    options: { 
+      paperSize, 
+      margins, 
+      includeToC, 
+      pageNumbers,
+      metadata
+    }
+  };
+
+  console.log('Generating PDF with payload:', payload);
+
+  try {
+    const response = await fetch('/api/generate-pdf', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`PDF generation failed: ${errorText}`);
+    }
+
+    console.log('PDF generated successfully');
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error('Failed to generate PDF:', error);
+    alert('Failed to generate PDF. Please try again.');
+  }
+}
+
+function toggleSettings(show?: boolean) {
+  const panel = document.getElementById('settingsPanel');
+  const backdrop = document.getElementById('settingsBackdrop');
+  if (panel && backdrop) {
+    const shouldShow = show !== undefined ? show : panel.style.transform === 'translateX(100%)';
+    panel.style.transform = shouldShow ? 'translateX(0)' : 'translateX(100%)';
+    backdrop.style.opacity = shouldShow ? '1' : '0';
+    backdrop.style.pointerEvents = shouldShow ? 'auto' : 'none';
+  }
+}
+
+function handleBackdropClick(event: MouseEvent) {
+  if (event.target === event.currentTarget) {
+    toggleSettings(false);
+  }
+}
+
+// Add event listeners
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('fileInput')?.addEventListener('change', handleFileUpload);
+  document.getElementById('saveMarkdown')?.addEventListener('click', saveMarkdown);
+  document.getElementById('exportPDF')?.addEventListener('click', generatePDF);
+  document.getElementById('toggleSettings')?.addEventListener('click', () => toggleSettings());
+  document.getElementById('settingsBackdrop')?.addEventListener('click', handleBackdropClick);
+  document.getElementById('closeSettings')?.addEventListener('click', () => toggleSettings(false));
+  setupAutosave();
+});
+</script>
+
+<!-- Floating Toolbar -->
+<div class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-white rounded-2xl shadow-lg p-4 flex items-center gap-4 z-50">
+  <div class="flex items-center gap-2">
+    <input
+      type="text"
+      id="filename"
+      placeholder="Enter filename"
+      class="input-field !w-64 !py-2 !px-3 text-sm"
+      value={storedData.currentFile?.name || 'document.pdf'}
+    />
+    
+    <select
+      id="recentFiles"
+      class="input-field !w-auto !py-2 !px-3 text-sm"
+      onchange="loadRecentFile(this.value)"
+    >
+      <option value="">Recent Files</option>
+      {storedData.recentFiles.map(file => (
+        <option value={file.name}>{file.name}</option>
+      ))}
+    </select>
+  </div>
+
+  <div class="h-6 w-px bg-light-gray"></div>
+
+  <div class="flex items-center gap-2">
+    <input
+      type="file"
+      id="fileInput"
+      accept=".md,.markdown"
+      class="hidden"
+    />
+    
+    <button
+      onclick="document.getElementById('fileInput').click()"
+      class="p-2 rounded-lg hover:bg-off-white transition-colors text-dark-gray hover:text-primary"
+      title="Open File"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+      </svg>
+    </button>
+    
+    <button
+      id="saveMarkdown"
+      class="p-2 rounded-lg hover:bg-off-white transition-colors text-dark-gray hover:text-primary"
+      title="Save Markdown"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+      </svg>
+    </button>
+
+    <button
+      id="toggleSettings"
+      class="p-2 rounded-lg hover:bg-off-white transition-colors text-dark-gray hover:text-primary"
+      title="Settings"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+    </button>
+  </div>
+
+  <div class="h-6 w-px bg-light-gray"></div>
+
+  <button
+    id="exportPDF"
+    class="bg-primary text-white px-4 py-2 rounded-xl hover:bg-primary/90 transition-all duration-300 flex items-center text-sm font-medium"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+    </svg>
+    Export PDF
+  </button>
+</div>
+
+<!-- Settings Panel -->
+<div 
+  id="settingsBackdrop"
+  class="fixed inset-0 bg-black/20 backdrop-blur-sm z-30 transition-opacity duration-300"
+  style="opacity: 0; pointer-events: none;"
+>
+  <!-- Settings Panel -->
+  <div id="settingsPanel" class="fixed right-8 top-24 w-[360px] bg-white rounded-2xl shadow-lg p-8 z-40 transform transition-all duration-300 ease-in-out" style="transform: translateX(100%)">
+    <button
+      id="closeSettings"
+      class="absolute top-4 right-4 p-2 rounded-lg hover:bg-off-white transition-colors text-dark-gray hover:text-primary"
+      title="Close Settings"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+    <div class="space-y-8">
+      <div>
+        <h3 class="text-lg font-medium mb-6 text-secondary">PDF Settings</h3>
+        <div class="space-y-6">
+          <div>
+            <label class="block text-sm mb-2 text-dark-gray">Paper Size</label>
+            <select
+              id="paperSize"
+              class="input-field !py-2"
+              value={lastUsedSettings.paperSize}
+            >
+              <option value="a4">A4</option>
+              <option value="letter">Letter</option>
+              <option value="legal">Legal</option>
+            </select>
+          </div>
+          
+          <div>
+            <label class="block text-sm mb-2 text-dark-gray">Margins</label>
+            <select
+              id="margins"
+              class="input-field !py-2"
+              value={lastUsedSettings.margins}
+            >
+              <option value="normal">Normal margins</option>
+              <option value="narrow">Narrow margins</option>
+              <option value="wide">Wide margins</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h3 class="text-lg font-medium mb-6 text-secondary">Options</h3>
+        <div class="space-y-4">
+          <label class="flex items-center space-x-3">
+            <input
+              type="checkbox"
+              id="toc"
+              class="rounded text-primary focus:ring-primary focus:ring-offset-2 focus:ring-offset-white"
+              checked={lastUsedSettings.includeToC}
+            >
+            <span class="text-dark-gray text-sm">Table of Contents</span>
+          </label>
+          
+          <label class="flex items-center space-x-3">
+            <input
+              type="checkbox"
+              id="pageNumbers"
+              class="rounded text-primary focus:ring-primary focus:ring-offset-2 focus:ring-offset-white"
+              checked={lastUsedSettings.pageNumbers}
+            >
+            <span class="text-dark-gray text-sm">Page Numbers</span>
+          </label>
+
+          <label class="flex items-center space-x-3">
+            <input
+              type="checkbox"
+              id="mathEnabled"
+              class="rounded text-primary focus:ring-primary focus:ring-offset-2 focus:ring-offset-white"
+              checked={lastUsedSettings.mathEnabled}
+            >
+            <span class="text-dark-gray text-sm">Math Support</span>
+          </label>
+        </div>
+      </div>
+
+      <div>
+        <h3 class="text-lg font-medium mb-6 text-secondary">Document Metadata</h3>
+        <div class="space-y-6">
+          <input
+            type="text"
+            id="metaTitle"
+            placeholder="Title"
+            class="input-field !py-2"
+            value={lastUsedSettings.metadata?.title || ''}
+          />
+          <input
+            type="text"
+            id="metaAuthor"
+            placeholder="Author"
+            class="input-field !py-2"
+            value={lastUsedSettings.metadata?.author || ''}
+          />
+          <input
+            type="text"
+            id="metaSubject"
+            placeholder="Subject"
+            class="input-field !py-2"
+            value={lastUsedSettings.metadata?.subject || ''}
+          />
+          <input
+            type="text"
+            id="metaKeywords"
+            placeholder="Keywords (comma-separated)"
+            class="input-field !py-2"
+            value={lastUsedSettings.metadata?.keywords?.join(', ') || ''}
+          />
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

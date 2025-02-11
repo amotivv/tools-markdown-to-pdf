@@ -1,0 +1,172 @@
+---
+---
+<script>
+import { EditorView, basicSetup } from "codemirror";
+import { markdown } from "@codemirror/lang-markdown";
+import { lineNumbers } from "@codemirror/view";
+import MarkdownIt from "markdown-it";
+
+const md = new MarkdownIt({
+  html: true,
+  linkify: true,
+  typographer: true
+});
+
+let editor;
+
+// Initialize editor when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+  // Create editor
+  editor = new EditorView({
+    doc: "",
+    extensions: [
+      basicSetup,
+      markdown(),
+    EditorView.updateListener.of(update => {
+      if (update.docChanged) {
+        const content = update.state.doc.toString();
+        const preview = document.getElementById('preview');
+        if (preview) {
+          preview.innerHTML = md.render(content);
+        }
+      }
+    }),
+    lineNumbers(),
+    EditorView.theme({
+      "&": {
+        height: "100%",
+        fontSize: "14px",
+        fontFamily: "IBM Plex Mono, monospace",
+        backgroundColor: "transparent"
+      },
+      ".cm-content": {
+        fontFamily: "IBM Plex Mono, monospace",
+        padding: "2rem",
+        minHeight: "calc(100vh - 12rem)"
+      },
+      ".cm-line": {
+        padding: "0 0.5rem",
+        lineHeight: "1.8",
+        fontFamily: "IBM Plex Mono, monospace"
+      },
+      ".cm-matchingBracket": {
+        color: "#4D7EFF",
+        textDecoration: "underline"
+      },
+      ".cm-activeLine": {
+        backgroundColor: "rgba(77, 126, 255, 0.05)"
+      },
+      ".cm-gutters": {
+        backgroundColor: "#F8F8F8",
+        border: "none",
+        borderRight: "1px solid #E5E5E5",
+        paddingRight: "0.5rem"
+      },
+      ".cm-gutter": {
+        minWidth: "2.5rem",
+        color: "#666666",
+        fontSize: "12px",
+        textAlign: "right"
+      },
+      ".cm-activeLineGutter": {
+        backgroundColor: "#F8F8F8",
+        color: "#4D7EFF"
+      },
+      ".cm-selectionBackground": {
+        backgroundColor: "rgba(77, 126, 255, 0.1) !important"
+      },
+      ".cm-focused": {
+        outline: "none !important"
+      },
+      ".cm-cursor": {
+        borderLeftColor: "#4D7EFF"
+      },
+      ".cm-gutterElement": {
+        paddingLeft: "0.5rem",
+        paddingRight: "0.5rem"
+      }
+    })
+  ],
+  parent: document.getElementById("editor")!
+});
+
+  // Make editor instance available globally
+  window.markdownEditor = editor;
+
+  // Add sample content
+  editor.dispatch({
+  changes: {
+    from: 0,
+    insert: `# Welcome to Markdown Editor
+
+Start typing your markdown here...
+
+## Features
+- Real-time preview
+- Syntax highlighting
+- Export to PDF
+- Custom styling
+
+### Code Example
+\`\`\`javascript
+function hello() {
+  console.log("Hello, World!");
+}
+\`\`\`
+`
+  }
+  });
+
+  console.log('Editor initialized with sample content');
+});
+</script>
+
+<div id="editor" class="h-full overflow-hidden border-0"></div>
+
+<style>
+  #editor {
+    min-height: calc(100vh - 12rem);
+  }
+
+  #editor :global(.cm-editor) {
+    height: 100%;
+  }
+
+  #editor :global(.cm-scroller) {
+    overflow: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--light-gray) var(--off-white);
+  }
+
+  #editor :global(.cm-scroller::-webkit-scrollbar) {
+    width: 6px;
+    height: 6px;
+  }
+
+  #editor :global(.cm-scroller::-webkit-scrollbar-track) {
+    background: var(--off-white);
+    border-radius: 3px;
+  }
+
+  #editor :global(.cm-scroller::-webkit-scrollbar-thumb) {
+    background: var(--light-gray);
+    border-radius: 3px;
+  }
+
+  #editor :global(.cm-scroller::-webkit-scrollbar-thumb:hover) {
+    background: #d1d1d1;
+  }
+
+  #editor :global(.cm-gutters) {
+    user-select: none;
+  }
+</style>
+
+<script>
+// TypeScript declaration for the global editor instance
+declare global {
+  interface Window {
+    markdownEditor: any;
+  }
+}
+</script>

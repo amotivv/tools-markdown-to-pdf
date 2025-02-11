@@ -1,0 +1,45 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Navigation from '../components/Navigation.astro';
+import Controls from '../components/Controls.astro';
+import Editor from '../components/Editor.astro';
+---
+
+<Layout>
+  <Navigation />
+  <main class="pt-14 flex-grow flex flex-col relative">
+    <div class="container max-w-[1440px] mx-auto px-4 sm:px-6 flex-grow flex flex-col">
+      <Controls />
+      <div class="flex-grow grid md:grid-cols-2 gap-6 mb-20 relative">
+        <div class="editor-container bg-white rounded-2xl shadow-sm overflow-hidden min-h-[calc(100vh-12rem)]">
+          <Editor />
+        </div>
+        <div class="preview-container prose prose-slate max-w-none bg-white rounded-2xl shadow-sm p-8 min-h-[calc(100vh-12rem)] overflow-auto">
+          <div id="preview" class="prose-headings:text-secondary prose-headings:font-medium prose-a:text-primary hover:prose-a:text-primary/80 prose-code:bg-off-white prose-code:rounded prose-code:px-1.5 prose-code:py-0.5 prose-pre:bg-off-white prose-pre:p-4 prose-pre:rounded-lg prose-blockquote:border-l-4 prose-blockquote:border-primary/20 prose-blockquote:pl-4 prose-p:text-base prose-headings:mb-4 prose-h1:text-4xl prose-h2:text-2xl prose-h3:text-xl">
+            <!-- Preview content will be rendered here -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</Layout>
+
+<style>
+  #preview::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  #preview::-webkit-scrollbar-track {
+    background: var(--off-white);
+    border-radius: 4px;
+  }
+
+  #preview::-webkit-scrollbar-thumb {
+    background: var(--light-gray);
+    border-radius: 4px;
+  }
+
+  #preview::-webkit-scrollbar-thumb:hover {
+    background: #d1d1d1;
+  }
+</style>
